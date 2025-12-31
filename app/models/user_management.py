@@ -11,13 +11,14 @@ from app.models.department import Department
 # Your SQL schema has a created_at for this table.
 # If SQLAlchemy should manage it, you can add it. Otherwise, DB default is fine.
 role_permissions = db.Table('role_permissions',
-    db.Column('role_id', db.Integer, db.ForeignKey('roles.role_id', ondelete='CASCADE'), primary_key=True),
-    db.Column('permission_id', db.Integer, db.ForeignKey('permissions.permission_id', ondelete='CASCADE'), primary_key=True),
+    db.Column('role_id', db.Integer, db.ForeignKey('master.roles.role_id', ondelete='CASCADE'), primary_key=True),
+    db.Column('permission_id', db.Integer, db.ForeignKey('master.permissions.permission_id', ondelete='CASCADE'), primary_key=True),
     db.Column('created_at', db.DateTime, default=datetime.utcnow) # Matches your SQL schema
 )
 
 class Role(db.Model):
     __tablename__ = 'roles'
+    __table_args__ = {'schema': 'master'}
 
     role_id = db.Column(db.Integer, primary_key=True)
     role_name = db.Column(db.String(50), unique=True, nullable=False)
@@ -39,6 +40,7 @@ class Role(db.Model):
 
 class Permission(db.Model):
     __tablename__ = 'permissions'
+    __table_args__ = {'schema': 'master'}
 
     permission_id = db.Column(db.Integer, primary_key=True)
     permission_name = db.Column(db.String(100), unique=True, nullable=False)
@@ -52,6 +54,7 @@ class Permission(db.Model):
 
 class User(db.Model):
     __tablename__ = 'users'
+    __table_args__ = {'schema': 'master'}
 
     user_id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
@@ -59,14 +62,14 @@ class User(db.Model):
     full_name = db.Column(db.String(100), nullable=True)
     email = db.Column(db.String(255), unique=True, nullable=True) # Schema allows NULL for email, but unique if present
     
-    role_id = db.Column(db.Integer, db.ForeignKey('roles.role_id'), nullable=False)
-    department_id = db.Column(db.Integer, db.ForeignKey('departments.department_id'), nullable=True) # Ensure Department model is defined
+    role_id = db.Column(db.Integer, db.ForeignKey('master.roles.role_id'), nullable=False)
+    department_id = db.Column(db.Integer, db.ForeignKey('master.departments.department_id'), nullable=True) # Ensure Department model is defined
     
     is_active = db.Column(db.Boolean, default=True, nullable=False) # Crucial for the previous error
     last_login = db.Column(db.DateTime, nullable=True)
     
-    created_by_user_id = db.Column(db.Integer, db.ForeignKey('users.user_id', name='fk_user_created_by'), nullable=True)
-    updated_by_user_id = db.Column(db.Integer, db.ForeignKey('users.user_id', name='fk_user_updated_by'), nullable=True)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey('master.users.user_id', name='fk_user_created_by'), nullable=True)
+    updated_by_user_id = db.Column(db.Integer, db.ForeignKey('master.users.user_id', name='fk_user_updated_by'), nullable=True)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

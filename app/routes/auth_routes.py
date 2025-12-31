@@ -49,6 +49,8 @@ def login():
             identity=str(user.user_id), 
             additional_claims=additional_claims
         )
+
+        print("the access token is :", access_token)
         # --- END OF CHANGE ---
         print(type(access_token), access_token)
         refresh_token = create_refresh_token(identity=str(user.user_id))
