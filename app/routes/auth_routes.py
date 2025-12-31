@@ -42,15 +42,16 @@ def login():
         # 1. Create a dictionary of extra data (claims) to put inside the token.
         # We are adding the user's role name here.
         additional_claims = {"role": user.role.role_name}
-        print(type(user.user_id))
+        #print(type(user.user_id))
         # 2. Pass these claims when creating the access token.
+        # Ensure identity is a string to avoid "Subject must be a string" errors
         access_token = create_access_token(
             identity=str(user.user_id), 
             additional_claims=additional_claims
         )
         # --- END OF CHANGE ---
-        print(access_token)
-        refresh_token = create_refresh_token(identity=user.user_id)
+        print(type(access_token), access_token)
+        refresh_token = create_refresh_token(identity=str(user.user_id))
 
         try:
             user.last_login = db.func.now()
@@ -70,52 +71,35 @@ def login():
         return jsonify({"success": False, "message": "Invalid username or password"}), 401
 
 @auth_bp.route('/profile', methods=['GET'])
-@jwt_required() 
+@jwt_required()
 def profile():
-    current_user_identity_str = get_jwt_identity() # Will be a string
-    
-    try:
-        # Convert string identity back to integer for database query
-        current_user_id_int = int(current_user_identity_str)
-    except ValueError:
-        return jsonify(success=False, message="Invalid user identity format in token."), 422
-        
-    user = User.query.get(current_user_id_int) 
-    
+    current_user_id = get_jwt_identity()  # already int
+
+    user = User.query.get(current_user_id)
     if not user:
-        return jsonify(success=False, message="User not found for the provided token."), 404
+        return jsonify(success=False, message="User not found."), 404
     if not user.is_active:
         return jsonify(success=False, message="User account is inactive."), 403
 
     return jsonify(success=True, data=user.to_dict()), 200
 
 
+
 @auth_bp.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
 def refresh():
-    try:
-        current_user_identity_str = get_jwt_identity() # Will be a string like "1", "2", etc.
-        
-        try:
-            # Convert string identity back to integer for database query
-            current_user_id_int = int(current_user_identity_str) 
-        except ValueError:
-            # Handle cases where the identity in the token is not a valid integer string
-            return jsonify(success=False, message="Invalid user identity format in token."), 422
+    current_user_id = get_jwt_identity()  # int
 
-        user = User.query.get(current_user_id_int)
+    user = User.query.get(current_user_id)
+    if not user:
+        return jsonify(success=False, message="User not found."), 401
+    if not user.is_active:
+        return jsonify(success=False, message="User account is inactive."), 403
 
-        if not user:
-            return jsonify(success=False, message="User not found for token."), 401
-        if not user.is_active:
-            return jsonify(success=False, message="User account is inactive. Cannot refresh token."), 403
-            
-        # Create the new access token using the string identity
-        new_access_token = create_access_token(identity=current_user_identity_str)
-        return jsonify(success=True, token=new_access_token), 200
-    except Exception as e:
-        print(f"Error in /refresh route: {str(e)}")
-        return jsonify(success=False, message="Error processing token refresh."), 500
+    # Ensure refresh generates an access token with string identity
+    new_access_token = create_access_token(identity=str(current_user_id))
+    return jsonify(success=True, token=new_access_token), 200
+
 
 @auth_bp.route('/logout', methods=['POST'])
 @jwt_required() # Requires a valid access token to "logout"
